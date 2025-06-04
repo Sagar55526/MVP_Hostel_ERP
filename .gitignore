@@ -1,0 +1,22 @@
+# Node modules (frontend)
+frontend/node_modules/
+
+# Python virtual env (if any)
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+
+# Flask instance folder
+backend/instance/
+
+# VSCode settings (optional)
+.vscode/
+
+# Environment variable files
+*.env
+
+# Build output for frontend
+frontend/dist/
+
+# Python bytecode
+*.pyc
