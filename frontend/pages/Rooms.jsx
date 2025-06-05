@@ -1,148 +1,173 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  getFloors,
+  getRooms,
+  getBeds,
+  createRoom,
+} from "../features/infrastructure/infraAPI";
 
 const Rooms = () => {
-  // Existing rooms data with floor, type, occupancy, capacity (total beds)
-  const [rooms, setRooms] = useState([
-    { id: 101, floor: "Floor 1", occupancy: 1, capacity: 2 },
-    { id: 102, floor: "Floor 1", occupancy: 3, capacity: 3 },
-  ]);
+  const [floors, setFloors] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [form, setForm] = useState({ name: "", floor_id: "", capacity: "" });
 
-  // For the new room form
-  const [form, setForm] = useState({
-    id: "",
-    floor: "",
-    capacity: "",
-  });
+  // This version enriches each floor with rooms and their beds
+  const loadFloors = async () => {
+    try {
+      const floorsData = await getFloors();
+      const enrichedFloors = await Promise.all(
+        floorsData.map(async (floor) => {
+          const roomsData = await getRooms(floor.id);
+          const enrichedRooms = await Promise.all(
+            roomsData.map(async (room) => {
+              const bedsData = await getBeds(room.id);
+              return { ...room, beds: bedsData };
+            })
+          );
+          return { ...floor, rooms: enrichedRooms };
+        })
+      );
+      setFloors(enrichedFloors);
+    } catch (err) {
+      console.error("Failed to load floors data:", err);
+    }
+  };
 
-  // Floors list for dropdown — in real app fetch from backend
-  const floors = ["Floor 1", "Floor 2", "Floor 3"];
+  // Load rooms whenever a floor is selected
+  useEffect(() => {
+    if (!form.floor_id) return;
 
-  // Handle form input changes
+    const loadRoomsForFloor = async () => {
+      try {
+        const roomsData = await getRooms(form.floor_id);
+        const enrichedRooms = await Promise.all(
+          roomsData.map(async (room) => {
+            const beds = await getBeds(room.id);
+            return {
+              ...room,
+              capacity: beds.length,
+              occupancy: beds.filter((b) => b.student !== null).length,
+            };
+          })
+        );
+        setRooms(enrichedRooms);
+      } catch (err) {
+        console.error("Failed to fetch rooms", err);
+      }
+    };
+
+    loadRoomsForFloor();
+  }, [form.floor_id]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Add new room
-  const handleAddRoom = (e) => {
+  useEffect(() => {
+    loadFloors();
+  }, []);
+
+  const handleAddRoom = async (e) => {
     e.preventDefault();
+    const { name, floor_id, capacity } = form;
+    if (!name || !floor_id || !capacity) return alert("Please fill all fields");
 
-    if (!form.id || !form.floor || !form.capacity) {
-      alert("Please fill all fields");
-      return;
+    try {
+      await createRoom({ name, floor_id, capacity: Number(capacity) });
+      setForm({ name: "", floor_id: "", capacity: "" });
+
+      // Reload floors so newly added room appears
+      await loadFloors();
+    } catch (err) {
+      console.error("Failed to add room", err);
+      alert("Failed to add room");
     }
-
-    // Check if room with same ID already exists
-    if (rooms.find((r) => r.id === Number(form.id))) {
-      alert("Room with this ID already exists.");
-      return;
-    }
-
-    const newRoom = {
-      id: Number(form.id),
-      floor: form.floor,
-      occupancy: 0, // New room initially empty
-      capacity: Number(form.capacity),
-    };
-
-    setRooms((prev) => [...prev, newRoom]);
-    setForm({ id: "", floor: "", capacity: "" });
   };
 
   return (
     <div className="container my-5">
       <h3 className="mb-4">Rooms Dashboard</h3>
 
-      {/* Rooms table */}
-      <table className="table table-bordered mb-5">
-        <thead>
-          <tr>
-            <th>Room ID</th>
-            <th>Floor</th>
-            <th>Occupancy</th>
-            <th>Capacity (Beds)</th>
-            <th>Available Beds</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rooms.length === 0 ? (
-            <tr>
-              <td colSpan="7" className="text-center">
-                No rooms found.
-              </td>
-            </tr>
-          ) : (
-            rooms.map((room) => (
-              <tr key={room.id}>
-                <td>{room.id}</td>
-                <td>{room.floor}</td>
-                <td>{room.occupancy}</td>
-                <td>{room.capacity}</td>
-                <td>{room.capacity - room.occupancy}</td>
-                <td>
-                  <button className="btn btn-primary btn-sm me-2">Edit</button>
-                  <button className="btn btn-danger btn-sm">Delete</button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
-      {/* Add Room Form */}
+      {/* Add Form */}
       <div className="card p-4 shadow-sm">
         <h4>Add New Room</h4>
         <form onSubmit={handleAddRoom}>
           <div className="mb-3">
-            <label className="form-label">Room ID / Number</label>
+            <label className="form-label">Room Name</label>
             <input
-              type="number"
-              className="form-control"
-              name="id"
-              value={form.id}
+              type="text"
+              name="name"
+              value={form.name}
               onChange={handleChange}
-              placeholder="e.g., 103"
+              className="form-control"
+              placeholder="e.g., 102A"
               required
             />
           </div>
-
           <div className="mb-3">
-            <label className="form-label">Floor</label>
+            <label className="form-label">Select Floor</label>
             <select
-              className="form-select"
-              name="floor"
-              value={form.floor}
+              name="floor_id"
+              value={form.floor_id}
               onChange={handleChange}
+              className="form-select"
               required
             >
-              <option value="">Select Floor</option>
+              <option value="">Choose...</option>
               {floors.map((floor) => (
-                <option key={floor} value={floor}>
-                  {floor}
+                <option key={floor.id} value={floor.id}>
+                  {floor.name}
                 </option>
               ))}
             </select>
           </div>
-
           <div className="mb-3">
-            <label className="form-label">Total Beds Capacity</label>
+            <label className="form-label">Total Beds</label>
             <input
               type="number"
-              className="form-control"
               name="capacity"
               value={form.capacity}
               onChange={handleChange}
-              min="1"
+              className="form-control"
+              min={1}
               required
             />
           </div>
-
-          <button className="btn btn-success" type="submit">
+          <button type="submit" className="btn btn-success">
             Add Room
           </button>
         </form>
       </div>
+
+      {/* Floor Layout */}
+      {floors.map((floor) => (
+        <div key={floor.id} className="floor-section card shadow-sm p-3 mt-3">
+          <h5 className="floor-title mb-3">{floor.name}</h5>
+          <div className="floor-layout">
+            {floor.rooms.map((room) => (
+              <div key={room.id} className="room-card">
+                <div className="room-header">Room {room.name}</div>
+                <div className="beds-grid">
+                  {room.beds.map((bed) => (
+                    <div
+                      key={bed.id}
+                      className={`bed-box ${
+                        bed.student ? "occupied" : "vacant"
+                      }`}
+                      title={
+                        bed.student
+                          ? `Occupied by ${bed.student.name}`
+                          : "Available"
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

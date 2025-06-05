@@ -9,7 +9,7 @@ const BedCard = ({ bed, onAssign, onVacate }) => {
       className={`card mb-2 ${isOccupied ? "border-danger" : "border-success"}`}
     >
       <div className="card-body">
-        <h6>Bed No: {bed.number}</h6>
+        <p>Student: {bed.student?.name}</p>
         {isOccupied ? (
           <>
             <p className="text-danger">Occupied</p>

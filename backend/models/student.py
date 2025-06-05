@@ -15,8 +15,6 @@ class Student(db.Model):
     aadhar = db.Column(db.String(12))
     address = db.Column(db.String(300))
     course = db.Column(db.String(100))
-    
-    # ✅ Add this line to store the uploaded photo filename
     photo = db.Column(db.String(200))
 
     def __init__(self, studentId, name, fatherName, dob, gender, email, phone,

@@ -8,6 +8,8 @@ import {
   getFloors,
   getRooms,
   getBeds,
+  assignBed,
+  vacateBed,
 } from "../features/infrastructure/infraAPI";
 
 const StudentProfile = () => {
@@ -46,17 +48,28 @@ const StudentProfile = () => {
     setShowModal(true);
   };
 
-  const handleAssignStudent = ({ bedId, student }) => {
-    // Simulate assigning student (replace with API later)
-    setBeds((prev) =>
-      prev.map((bed) => (bed.id === bedId ? { ...bed, student } : bed))
-    );
+  const handleAssignStudent = async ({ bedId, student }) => {
+    try {
+      await assignBed(bedId, student.id);
+      setBeds((prev) =>
+        prev.map((bed) =>
+          bed.id === bedId ? { ...bed, student: student } : bed
+        )
+      );
+    } catch (err) {
+      console.error("Assignment failed:", err);
+    }
   };
 
-  const handleVacate = (bedId) => {
-    setBeds((prev) =>
-      prev.map((bed) => (bed.id === bedId ? { ...bed, student: null } : bed))
-    );
+  const handleVacate = async (bedId) => {
+    try {
+      await vacateBed(bedId);
+      setBeds((prev) =>
+        prev.map((bed) => (bed.id === bedId ? { ...bed, student: null } : bed))
+      );
+    } catch (err) {
+      console.error("Vacate failed:", err);
+    }
   };
 
   return (
