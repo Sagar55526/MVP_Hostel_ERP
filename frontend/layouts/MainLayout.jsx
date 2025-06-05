@@ -31,7 +31,7 @@ const MainLayout = ({ children }) => {
           </li>
           <li>
             <NavLink
-              to="/student-profile"
+              to="/beds"
               className={({ isActive }) =>
                 "nav-link text-white" + (isActive ? " active bg-primary" : "")
               }
@@ -57,6 +57,16 @@ const MainLayout = ({ children }) => {
               }
             >
               Floor Management
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/student-profile"
+              className={({ isActive }) =>
+                "nav-link text-white" + (isActive ? " active bg-primary" : "")
+              }
+            >
+              Student Profiles
             </NavLink>
           </li>
           <li>

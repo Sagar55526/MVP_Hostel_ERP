@@ -8,8 +8,8 @@ import Rooms from "../pages/Rooms";
 import Beds from "../pages/Beds";
 import FeeTracking from "../pages/FeeTracking";
 import BiometricLogs from "../pages/BiometricLogs";
-import StudentProfile from "../pages/Beds";
 import RegisterStudent from "../pages/RegisterStudent";
+import StudentProfile from "../pages/StudentProfile";
 
 const AppRoutes = () => (
   <Router>
@@ -21,8 +21,8 @@ const AppRoutes = () => (
         <Route path="/beds" element={<Beds />} />
         <Route path="/fees" element={<FeeTracking />} />
         <Route path="/biometric-logs" element={<BiometricLogs />} />
-        <Route path="/student-profile" element={<StudentProfile />} />
         <Route path="/register-student" element={<RegisterStudent />} />
+        <Route path="/student-profile" element={<StudentProfile />} />
       </Routes>
     </MainLayout>
   </Router>

@@ -17,25 +17,43 @@ const RegisterStudent = () => {
     aadhar: "",
     address: "",
     course: "",
-    photo: null,
+    photo: null, // New field for photo file
   });
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "photo") {
-      setForm({ ...form, photo: files[0] });
+      setForm({ ...form, photo: files[0] }); // Handle file input
     } else {
       setForm({ ...form, [name]: value });
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("New Student Registered:", form);
 
-    // In real usage, use FormData and send to backend via POST
-    alert("Student registered successfully!");
-    navigate("/student-profile");
+    const formData = new FormData();
+    for (const key in form) {
+      formData.append(key, form[key]);
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/register-student", {
+        method: "POST",
+        body: formData, // FormData includes file + text fields
+      });
+
+      if (res.ok) {
+        alert("Student registered successfully!");
+        navigate("/student-profile");
+      } else {
+        const error = await res.json();
+        alert("Error: " + (error.message || error.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Registration error:", err);
+      alert("Something went wrong while registering!");
+    }
   };
 
   return (
@@ -97,7 +115,7 @@ const RegisterStudent = () => {
             <input
               type="text"
               className="form-control"
-              name="studentregNum"
+              name="studentId"
               value={form.studentId}
               readOnly
             />
@@ -173,13 +191,13 @@ const RegisterStudent = () => {
             ></textarea>
           </div>
 
-          <div className="col-md-6 mb-4">
-            <label>Profile Photo</label>
+          <div className="col-md-6 mb-3">
+            <label>Upload Profile Photo</label>
             <input
               type="file"
-              accept="image/*"
               className="form-control"
               name="photo"
+              accept="image/*"
               onChange={handleChange}
             />
           </div>

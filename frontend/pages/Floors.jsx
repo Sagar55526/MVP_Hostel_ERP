@@ -1,21 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import "./Floors.css"; // We'll write custom styles here
 
 const Floors = () => {
-  // Sample existing floors data with stats
   const [floors, setFloors] = useState([
     {
       id: 1,
       name: "Floor 1",
-      totalRooms: 10,
-      totalBeds: 50,
-      occupiedBeds: 32,
+      rooms: [
+        { roomId: 101, totalBeds: 4, occupiedBeds: 2 },
+        { roomId: 102, totalBeds: 3, occupiedBeds: 1 },
+        { roomId: 103, totalBeds: 5, occupiedBeds: 5 },
+      ],
     },
     {
       id: 2,
       name: "Floor 2",
-      totalRooms: 8,
-      totalBeds: 40,
-      occupiedBeds: 18,
+      rooms: [
+        { roomId: 201, totalBeds: 2, occupiedBeds: 1 },
+        { roomId: 202, totalBeds: 4, occupiedBeds: 0 },
+        { roomId: 203, totalBeds: 3, occupiedBeds: 3 },
+      ],
     },
   ]);
 
@@ -25,26 +29,31 @@ const Floors = () => {
     totalBeds: "",
   });
 
-  // Handle form inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Add new floor
   const handleAddFloor = (e) => {
     e.preventDefault();
-    if (!form.name || !form.totalRooms || !form.totalBeds) {
+    if (!form.name) {
       alert("Please fill all fields");
       return;
     }
 
+    const newRooms = Array.from(
+      { length: Number(form.totalRooms) },
+      (_, i) => ({
+        roomId: Number(`${floors.length + 1}${i + 1}`),
+        totalBeds: Math.floor(form.totalBeds / form.totalRooms),
+        occupiedBeds: 0,
+      })
+    );
+
     const newFloor = {
-      id: floors.length + 1, // For now local ID
+      id: floors.length + 1,
       name: form.name,
-      totalRooms: Number(form.totalRooms),
-      totalBeds: Number(form.totalBeds),
-      occupiedBeds: 0, // New floor starts with 0 occupied beds
+      rooms: newRooms,
     };
 
     setFloors((prev) => [...prev, newFloor]);
@@ -55,37 +64,33 @@ const Floors = () => {
     <div className="container my-5">
       <h3 className="mb-4">Floors Dashboard</h3>
 
-      {/* Floor summary cards */}
-      <div className="row mb-5">
-        {floors.length === 0 ? (
-          <p>No floors found.</p>
-        ) : (
-          floors.map((floor) => (
-            <div className="col-md-4" key={floor.id}>
-              <div className="card mb-3 shadow-sm">
-                <div className="card-body">
-                  <h5 className="card-title">{floor.name}</h5>
-                  <p className="mb-1">Total Rooms: {floor.totalRooms}</p>
-                  <p className="mb-1">Total Beds: {floor.totalBeds}</p>
-                  <p className="mb-1">
-                    Occupied Beds:{" "}
-                    <span
-                      className={
-                        floor.occupiedBeds === 0
-                          ? "text-success"
-                          : "text-danger"
-                      }
-                    >
-                      {floor.occupiedBeds}
-                    </span>{" "}
-                    / {floor.totalBeds}
-                  </p>
+      {/* Floor Layout */}
+      {floors.map((floor) => (
+        <div key={floor.id} className="floor-section card shadow-sm p-3 mb-4">
+          <h5 className="floor-title mb-3">{floor.name}</h5>
+          <div className="floor-layout">
+            {floor.rooms.map((room) => (
+              <div key={room.roomId} className="room-card">
+                <div className="room-header">Room {room.roomId}</div>
+                <div className="beds-grid">
+                  {Array.from({ length: room.totalBeds }).map((_, idx) => {
+                    const isOccupied = idx < room.occupiedBeds;
+                    return (
+                      <div
+                        key={idx}
+                        className={`bed-box ${
+                          isOccupied ? "occupied" : "vacant"
+                        }`}
+                        title={isOccupied ? "Occupied" : "Available"}
+                      />
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* Add new floor form */}
       <div className="card p-4 shadow-sm">
@@ -100,32 +105,6 @@ const Floors = () => {
               value={form.name}
               onChange={handleChange}
               placeholder="e.g., Floor 3"
-              required
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Total Rooms</label>
-            <input
-              type="number"
-              className="form-control"
-              name="totalRooms"
-              value={form.totalRooms}
-              onChange={handleChange}
-              min="1"
-              required
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Total Beds Capacity</label>
-            <input
-              type="number"
-              className="form-control"
-              name="totalBeds"
-              value={form.totalBeds}
-              onChange={handleChange}
-              min="1"
               required
             />
           </div>

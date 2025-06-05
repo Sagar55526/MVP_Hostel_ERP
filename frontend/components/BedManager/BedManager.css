@@ -1,0 +1,62 @@
+.floor-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.room-box {
+  border: 2px solid #ccc;
+  padding: 15px;
+  border-radius: 12px;
+  width: 280px;
+  background-color: #f8f9fa;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.vacant-count {
+  font-size: 14px;
+  background: #d4edda;
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: #155724;
+}
+
+.bed-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bed-square {
+  width: 45px;
+  height: 45px;
+  border-radius: 6px;
+  text-align: center;
+  line-height: 45px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.bed-square.vacant {
+  background-color: #28a745;
+  color: white;
+}
+
+.bed-square.occupied {
+  background-color: #dc3545;
+  color: white;
+}
+
+.bed-square:hover {
+  transform: scale(1.05);
+}

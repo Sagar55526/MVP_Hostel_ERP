@@ -60,8 +60,8 @@ const StudentProfile = () => {
   };
 
   return (
-    <div className="container">
-      <h2 className="mb-4">Manage Bed Assignments</h2>
+    <div className="container my-5">
+      <h3 className="mb-4">Manage Bed Assignments</h3>
       <FloorSelector
         floors={floors}
         selectedFloor={selectedFloor}
