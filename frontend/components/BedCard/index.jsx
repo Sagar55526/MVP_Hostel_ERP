@@ -1,4 +1,3 @@
-// src/components/BedCard/index.jsx
 import React from "react";
 
 const BedCard = ({ bed, onAssign, onVacate }) => {
@@ -9,11 +8,16 @@ const BedCard = ({ bed, onAssign, onVacate }) => {
       className={`card mb-2 ${isOccupied ? "border-danger" : "border-success"}`}
     >
       <div className="card-body">
-        <p>Student: {bed.student?.name}</p>
+        <h5 className="card-title">Bed No: {bed.bed_no}</h5>
+
         {isOccupied ? (
           <>
-            <p className="text-danger">Occupied</p>
-            <p>Student: {bed.student.name}</p>
+            <p className="text-danger fw-bold">Occupied</p>
+            <p>
+              <strong>Student Name:</strong> {bed.student.name}
+              <br />
+              <strong>ID:</strong> {bed.student.studentId}
+            </p>
             <button
               className="btn btn-sm btn-warning"
               onClick={() => onVacate(bed.id)}
@@ -23,7 +27,7 @@ const BedCard = ({ bed, onAssign, onVacate }) => {
           </>
         ) : (
           <>
-            <p className="text-success">Available</p>
+            <p className="text-success fw-bold">Available</p>
             <button
               className="btn btn-sm btn-primary"
               onClick={() => onAssign(bed.id)}

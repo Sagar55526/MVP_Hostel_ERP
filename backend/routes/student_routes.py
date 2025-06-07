@@ -1,100 +1,118 @@
-from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
-from models.student import Student
-from flask_cors import cross_origin
+from flask import Blueprint, request, jsonify, current_app
+from models.models import Student  # ✅ fixed import
 from db import db
 import os
-import logging
+from werkzeug.utils import secure_filename
+from datetime import datetime
 
-student_bp = Blueprint("student", __name__)
+student_bp = Blueprint("student_bp", __name__)
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 
-logging.basicConfig(level=logging.DEBUG)
-
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@student_bp.route("/api/register-student", methods=["POST"])
-@cross_origin(origin='http://localhost:5173', supports_credentials=True)
+@student_bp.route('/students', methods=['POST'])
 def register_student():
-    data = request.form  # form fields
-    file = request.files.get("photo")  # uploaded photo file
+    try:
+        studentId = request.form.get('studentId')
+        name = request.form.get('name')
+        fatherName = request.form.get('fatherName')
+        dob_str = request.form.get('dob')
+        gender = request.form.get('gender')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        emergencyContact = request.form.get('emergencyContact')
+        aadhar = request.form.get('aadhar')
+        address = request.form.get('address')
+        course = request.form.get('course')
+        photo = request.files.get('photo')
 
-    filename = None
-    student_id = data.get("studentId")
+        # Convert date string to datetime object
+        dob = None
+        if dob_str:
+            dob = datetime.strptime(dob_str, '%Y-%m-%d')
 
-    if file and allowed_file(file.filename) and student_id:
-        # Get file extension safely
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        # Construct filename as studentId + extension, e.g. S1234.jpg
-        filename = secure_filename(f"{student_id}.{ext}")
+        # Handle photo upload
+        photo_filename = None
+        if photo:
+            ext = os.path.splitext(photo.filename)[1]
+            photo_filename = secure_filename(f"{studentId}{ext}")
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            photo.save(os.path.join(upload_folder, photo_filename))
 
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
-    else:
-        filename = None  # or handle missing/invalid photo
+        # Create new student object
+        new_student = Student(
+            studentId=studentId,
+            name=name,
+            fatherName=fatherName,
+            dob=dob,
+            gender=gender,
+            email=email,
+            phone=phone,
+            emergencyContact=emergencyContact,
+            aadhar=aadhar,
+            address=address,
+            course=course,
+            photo=photo_filename
+        )
 
-    new_student = Student(
-        studentId=student_id,
-        name=data.get("name"),
-        fatherName=data.get("fatherName"),
-        dob=data.get("dob"),
-        gender=data.get("gender"),
-        email=data.get("email"),
-        phone=data.get("phone"),  # fixed typo here
-        emergencyContact=data.get("emergencyContact"),
-        aadhar=data.get("aadhar"),
-        address=data.get("address"),
-        course=data.get("course"),
-        photo=filename
-    )
-    db.session.add(new_student)
-    db.session.commit()
+        db.session.add(new_student)
+        db.session.commit()
 
-    return jsonify({"message": "Student registered successfully"})
+        return jsonify({"message": "Student registered successfully"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-@student_bp.route('/api/students', methods=['GET'])
-@cross_origin(origin='http://localhost:5173', supports_credentials=True)
+@student_bp.route('/students', methods=['GET'])
 def get_students():
-    # Optional query params
-    sort_by = request.args.get('sort_by', 'studentId')  # default sort by studentId
-    order = request.args.get('order', 'asc')  # asc or desc
+    try:
+        # Get query params for sorting and filtering
+        sort_by = request.args.get('sortBy', 'studentId')
+        order = request.args.get('order', 'asc')
+        course_filter = request.args.get('course', None)
 
-    # Basic filtering example (can add more filters later)
-    filters = []
-    # e.g., filter by course
-    course = request.args.get('course')
-    if course:
-        filters.append(Student.course.ilike(f'%{course}%'))
+        # Validate sort_by column to avoid SQL injection
+        valid_sort_columns = {'studentId', 'name', 'course'}
+        if sort_by not in valid_sort_columns:
+            sort_by = 'studentId'
 
-    query = Student.query.filter(*filters)
+        # Start query
+        query = Student.query
 
-    # Apply sorting
-    if order == 'desc':
-        query = query.order_by(db.desc(getattr(Student, sort_by)))
-    else:
-        query = query.order_by(db.asc(getattr(Student, sort_by)))
+        # Apply course filter if present
+        if course_filter:
+            query = query.filter(Student.course.ilike(f"%{course_filter}%"))
 
-    students = query.all()
+        # Apply ordering
+        sort_column = getattr(Student, sort_by)
+        if order == 'desc':
+            sort_column = sort_column.desc()
+        else:
+            sort_column = sort_column.asc()
 
-    result = []
-    for s in students:
-        result.append({
-            'id': s.id,
-            'studentId': s.studentId,
-            'name': s.name,
-            'fatherName': s.fatherName,
-            'dob': s.dob,
-            'gender': s.gender,
-            'email': s.email,
-            'phone': s.phone,
-            'emergencyContact': s.emergencyContact,
-            'aadhar': s.aadhar,
-            'address': s.address,
-            'course': s.course,
-            'photo': s.photo  # relative path or URL
-        })
-    return jsonify(result)
+        query = query.order_by(sort_column)
+
+        students = query.all()
+
+        # Serialize students data
+        students_list = []
+        for s in students:
+            students_list.append({
+                "id": s.id,
+                "studentId": s.studentId,
+                "name": s.name,
+                "fatherName": s.fatherName,
+                "dob": s.dob.isoformat() if s.dob else None,
+                "gender": s.gender,
+                "email": s.email,
+                "phone": s.phone,
+                "emergencyContact": s.emergencyContact,
+                "aadhar": s.aadhar,
+                "address": s.address,
+                "course": s.course,
+                "photo": s.photo
+            })
+
+        return jsonify({"students": students_list}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

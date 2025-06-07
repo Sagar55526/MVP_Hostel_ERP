@@ -5,17 +5,35 @@ const StudentProfile = () => {
   const [sortBy, setSortBy] = useState("studentId");
   const [order, setOrder] = useState("asc");
   const [courseFilter, setCourseFilter] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchStudents = async () => {
-    let url = `http://localhost:5000/api/students?sort_by=${sortBy}&order=${order}`;
-    if (courseFilter) {
-      url += `&course=${encodeURIComponent(courseFilter)}`;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (sortBy) params.append("sortBy", sortBy);
+      if (order) params.append("order", order);
+      if (courseFilter) params.append("course", courseFilter);
+
+      const response = await fetch(
+        `http://localhost:5000/api/students?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch students");
+      }
+
+      const data = await response.json();
+      setStudents(data.students || []);
+    } catch (err) {
+      setError(err.message);
     }
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      setStudents(data);
-    }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -63,8 +81,16 @@ const StudentProfile = () => {
         </div>
       </div>
 
+      {/* Loading/Error */}
+      {loading && <p>Loading students...</p>}
+      {error && <p className="text-danger">Error: {error}</p>}
+
       {/* Student Cards */}
       <div className="row">
+        {!loading && !error && students.length === 0 && (
+          <p>No students found.</p>
+        )}
+
         {students.map((student) => (
           <div key={student.id} className="col-md-3 mb-4">
             <div className="card h-100 shadow-sm">
@@ -75,10 +101,10 @@ const StudentProfile = () => {
                   className="card-img-top mt-3"
                   style={{
                     width: "100%",
-                    height: "auto", // let height adjust automatically for aspect ratio
-                    maxHeight: "200px", // max height so card size stays consistent
-                    objectFit: "contain", // contain ensures whole image fits without cropping
-                    backgroundColor: "#f8f9fa", // optional: light bg to handle transparent images nicely
+                    height: "auto",
+                    maxHeight: "200px",
+                    objectFit: "contain",
+                    backgroundColor: "#f8f9fa",
                   }}
                 />
               ) : (

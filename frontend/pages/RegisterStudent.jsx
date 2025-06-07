@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const RegisterStudent = () => {
   const navigate = useNavigate();
@@ -31,28 +33,41 @@ const RegisterStudent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const formData = new FormData();
-    for (const key in form) {
-      formData.append(key, form[key]);
-    }
+    Object.entries(form).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
 
     try {
-      const res = await fetch("http://localhost:5000/api/register-student", {
+      const res = await fetch("http://localhost:5000/api/students", {
         method: "POST",
-        body: formData, // FormData includes file + text fields
+        body: formData,
       });
 
       if (res.ok) {
-        alert("Student registered successfully!");
-        navigate("/student-profile");
+        // Replace alert with toast success notification
+        toast.success("Student registered successfully!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        // Optional: Reset form or redirect after delay
       } else {
-        const error = await res.json();
-        alert("Error: " + (error.message || error.error || "Unknown error"));
+        const err = await res.json();
+        toast.error("Error: " + err.error, {
+          position: "top-right",
+          autoClose: 4000,
+        });
       }
     } catch (err) {
-      console.error("Registration error:", err);
-      alert("Something went wrong while registering!");
+      toast.error("Network error: " + err.message, {
+        position: "top-right",
+        autoClose: 4000,
+      });
     }
   };
 
@@ -207,6 +222,7 @@ const RegisterStudent = () => {
           Register Student
         </button>
       </form>
+      <ToastContainer />
     </div>
   );
 };

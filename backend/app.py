@@ -1,45 +1,38 @@
 from flask import Flask, send_from_directory
-import os
 from flask_cors import CORS
 from db import db
+import os
 from db_config import Config
-from routes.student_routes import student_bp
-from routes.infra_routes import infra_bp  
-from routes.floor_routes import floor_bp
 
-# Step 1: Initialize Flask
+# Blueprints
+from routes.floor_routes import floor_bp
+from routes.room_routes import room_bp
+from routes.bed_routes import bed_bp
+from routes.student_routes import student_bp
+
 app = Flask(__name__)
+CORS(app) 
 app.config.from_object(Config)
 
-# Step 2: CORS setup
+# Enable CORS globally
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
-# Step 3: Uploads
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 @app.route('/uploads/<path:filename>')
-def serve_uploads(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+def uploaded_file(filename):
+    return send_from_directory('uploads', filename)
 
-# Step 4: DB setup
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# print("SQLALCHEMY_DATABASE_URI =>", app.config["SQLALCHEMY_DATABASE_URI"])
+# Initialize DB
 db.init_app(app)
 
-
-# Step 6: Register blueprints
-app.register_blueprint(student_bp) 
-app.register_blueprint(infra_bp)
+# Register blueprints
 app.register_blueprint(floor_bp)
+app.register_blueprint(room_bp)
+app.register_blueprint(bed_bp)
+# app.register_blueprint(student_bp)
+app.register_blueprint(student_bp, url_prefix='/api')
 
-
-@app.route("/")
-def index():
-    return "Server is running"
-
-# Optional: create tables directly (for testing only — use migrations in production)
-# with app.app_context():
-#     db.create_all()
-
-# Step 7: Run server
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

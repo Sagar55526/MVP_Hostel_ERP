@@ -12,7 +12,7 @@ const RoomSelector = ({ rooms, selectedRoom, onChange }) => {
         <option value="">-- Select Room --</option>
         {rooms.map((room) => (
           <option key={room.id} value={room.id}>
-            {room.name}
+            {room.room_no}{" "}
           </option>
         ))}
       </select>

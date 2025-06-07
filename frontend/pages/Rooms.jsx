@@ -1,104 +1,66 @@
-import React, { useEffect, useState } from "react";
-import {
-  getFloors,
-  getRooms,
-  getBeds,
-  createRoom,
-} from "../features/infrastructure/infraAPI";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./Rooms.css";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { FaPlus } from "react-icons/fa";
 
 const Rooms = () => {
+  const [form, setForm] = useState({ room_no: "", floor_id: "", capacity: "" });
   const [floors, setFloors] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [form, setForm] = useState({ name: "", floor_id: "", capacity: "" });
 
-  // This version enriches each floor with rooms and their beds
-  const loadFloors = async () => {
+  // Fetch floors from backend on component mount
+  useEffect(() => {
+    fetchFloors();
+  }, []);
+
+  const fetchFloors = async () => {
     try {
-      const floorsData = await getFloors();
-      const enrichedFloors = await Promise.all(
-        floorsData.map(async (floor) => {
-          const roomsData = await getRooms(floor.id);
-          const enrichedRooms = await Promise.all(
-            roomsData.map(async (room) => {
-              const bedsData = await getBeds(room.id);
-              return { ...room, beds: bedsData };
-            })
-          );
-          return { ...floor, rooms: enrichedRooms };
-        })
-      );
-      setFloors(enrichedFloors);
+      const res = await fetch("http://localhost:5000/floors");
+      if (!res.ok) throw new Error("Failed to fetch floors");
+      const data = await res.json();
+      setFloors(data.floors);
     } catch (err) {
-      console.error("Failed to load floors data:", err);
+      alert(err.message);
     }
   };
-
-  // Load rooms whenever a floor is selected
-  useEffect(() => {
-    if (!form.floor_id) return;
-
-    const loadRoomsForFloor = async () => {
-      try {
-        const roomsData = await getRooms(form.floor_id);
-        const enrichedRooms = await Promise.all(
-          roomsData.map(async (room) => {
-            const beds = await getBeds(room.id);
-            return {
-              ...room,
-              capacity: beds.length,
-              occupancy: beds.filter((b) => b.student !== null).length,
-            };
-          })
-        );
-        setRooms(enrichedRooms);
-      } catch (err) {
-        console.error("Failed to fetch rooms", err);
-      }
-    };
-
-    loadRoomsForFloor();
-  }, [form.floor_id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  useEffect(() => {
-    loadFloors();
-  }, []);
-
   const handleAddRoom = async (e) => {
     e.preventDefault();
-    const { name, floor_id, capacity } = form;
-    if (!name || !floor_id || !capacity) return alert("Please fill all fields");
-
     try {
-      await createRoom({ name, floor_id, capacity: Number(capacity) });
+      await axios.post("http://localhost:5000/rooms", form); // use full URL if CORS proxy isn't set
+      toast.success("Room added successfully!");
       setForm({ name: "", floor_id: "", capacity: "" });
-
-      // Reload floors so newly added room appears
-      await loadFloors();
+      fetchFloors();
     } catch (err) {
-      console.error("Failed to add room", err);
-      alert("Failed to add room");
+      if (err.response && err.response.data && err.response.data.error) {
+        toast.error(err.response.data.error); // Show the specific error from backend
+      } else {
+        toast.error("Failed to add room");
+      }
     }
   };
 
   return (
     <div className="container my-5">
+      <ToastContainer />
       <h3 className="mb-4">Rooms Dashboard</h3>
 
-      {/* Add Form */}
-      <div className="card p-4 shadow-sm">
+      {/* Add Room Form */}
+      <div className="card p-4 shadow-sm mb-4">
         <h4>Add New Room</h4>
         <form onSubmit={handleAddRoom}>
           <div className="mb-3">
-            <label className="form-label">Room Name</label>
+            <label className="form-label">Room Number</label>
             <input
               type="text"
-              name="name"
-              value={form.name}
+              name="room_no"
+              value={form.room_no}
               onChange={handleChange}
               className="form-control"
               placeholder="e.g., 102A"
@@ -141,30 +103,71 @@ const Rooms = () => {
       </div>
 
       {/* Floor Layout */}
+      {floors.length === 0 && (
+        <p className="mt-3 text-muted">No floors found.</p>
+      )}
       {floors.map((floor) => (
-        <div key={floor.id} className="floor-section card shadow-sm p-3 mt-3">
-          <h5 className="floor-title mb-3">{floor.name}</h5>
-          <div className="floor-layout">
-            {floor.rooms.map((room) => (
-              <div key={room.id} className="room-card">
-                <div className="room-header">Room {room.name}</div>
-                <div className="beds-grid">
-                  {room.beds.map((bed) => (
-                    <div
-                      key={bed.id}
-                      className={`bed-box ${
-                        bed.student ? "occupied" : "vacant"
-                      }`}
-                      title={
-                        bed.student
-                          ? `Occupied by ${bed.student.name}`
-                          : "Available"
-                      }
-                    />
-                  ))}
+        <div
+          key={floor.id}
+          className="floor-container card mb-4 p-3 shadow-sm bg-light border"
+        >
+          <h5 className="mb-3 text-primary fw-bold">
+            {floor.name} (Floor No: {floor.floor_no})
+          </h5>
+
+          <div className="room-row d-flex flex-wrap gap-3">
+            {floor.rooms && floor.rooms.length > 0 ? (
+              floor.rooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="room-card p-3 bg-white border rounded shadow-sm"
+                  style={{ minWidth: "180px" }}
+                >
+                  <h6 className="mb-2 text-secondary">Room {room.room_no}</h6>
+                  <div className="bed-grid d-flex flex-wrap gap-2">
+                    {room.beds && room.beds.length > 0 ? (
+                      room.beds.map((bed) => (
+                        <div
+                          key={bed.id}
+                          className={`bed-box p-2 rounded text-center text-white fw-semibold shadow-sm ${
+                            bed.status === "occupied"
+                              ? "bg-danger"
+                              : "bg-success"
+                          }`}
+                          title={
+                            bed.student
+                              ? `Occupied by ${bed.student.name}`
+                              : "Available"
+                          }
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {bed.bed_no}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted">No beds</div>
+                    )}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div>
+                <p className="text-muted">No rooms found.</p>
+                {/* <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    window.location.href = `/rooms?floorId=${floor.id}`;
+                  }}
+                >
+                  <FaPlus style={{ marginRight: "5px" }} />
+                  Add Rooms
+                </button> */}
               </div>
-            ))}
+            )}
           </div>
         </div>
       ))}
